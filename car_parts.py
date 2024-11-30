@@ -118,7 +118,7 @@ class CarPartDatabase(metaclass=SingletonMeta):
 
 # The 'CarPart' class is an abstract base class with abstract methods 'get_price' and 'get_name' for
 # representing car parts.
-class CarPart(metaclass=ABC):
+class CarPart(ABC):
 
     @abstractmethod
     def get_price(self):
@@ -167,52 +167,6 @@ class Color(CarPart):
 
     def get_name(self):
         return "Color"
-
-
-# The 'CarPartDatabase' class allows for adding and retrieving prices of car parts based on their type
-# and name.
-class CarPartDatabase:
-    def __init__(self):
-        self.parts = {}
-        self.add_part("Engine", "V8", 1000)
-        self.add_part("Color", "Red", 500)
-
-    def add_part(self, part_type, part_name, price):
-        """
-        The function 'add_part' adds a part with its type, name, and price to a dictionary of parts.
-
-        :param part_type: The 'part_type' parameter in the 'add_part' method refers to the category or
-        type of the part being added. It is used to organize the parts within the 'self.parts'
-        dictionary
-        :param part_name: The 'part_name' parameter in the 'add_part' method refers to the name of the
-        part that you want to add to the 'self.parts' dictionary. This name is used as the key in the
-        nested dictionary structure where the price of the part is stored
-        :param price: The 'price' parameter in the 'add_part' method represents the cost or price of the
-        part being added to the object. It is the amount that needs to be paid or considered when adding
-        a new part to the collection
-        """
-        if part_type not in self.parts:
-            self.parts[part_type] = {}
-        self.parts[part_type][part_name] = price
-
-    def get_price(self, part_type, part_name):
-        """
-        The function 'get_price' retrieves the price of a specific part based on its type and name.
-
-        :param part_type: The 'part_type' parameter in the 'get_price' method refers to the category or
-        type of the part for which you want to retrieve the price. It is used to specify the group or
-        classification to which the part belongs, such as "CPU", "GPU", "RAM", etc
-        :param part_name: The 'part_name' parameter in the 'get_price' method refers to the specific
-        name of the part for which you want to retrieve the price. This parameter is used to look up the
-        price of a particular part within the 'self.parts' dictionary based on the 'part_type' and 'part
-        :return: The 'get_price' method is returning the price of a specific part, identified by its
-        type and name, from a dictionary 'self.parts'. If the part type and name are found in the
-        dictionary, the method returns the price of that part. If the part is not found, it returns
-        'None'.
-        """
-        if part_type in self.parts and part_name in self.parts[part_type]:
-            return self.parts[part_type][part_name]
-        return None
 
 
 # The class 'CarPart' is an abstract base class with abstract methods 'get_price' and 'get_name'.
@@ -415,6 +369,8 @@ def main():
 
     except Exception as e:
         print(f"Error in main: {e}")
+    finally:
+        report_manager.close()  # Close the database connection
 
 
 if __name__ == "__main__":

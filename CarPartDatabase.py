@@ -1,4 +1,7 @@
 import sqlite3
+import json
+from datetime import datetime
+import SingletonMeta
 
 
 def create_connection(db_file):
@@ -86,6 +89,64 @@ def get_engines(conn):
 def close_connection(conn):
     if conn:
         conn.close()
+
+
+class ReportManager(metaclass=SingletonMeta):
+    def __init__(self, db_file='reports.db'):
+        self.reports = []
+        self.conn = self.create_connection(db_file)
+        self.create_report_table()
+
+    def create_connection(self, db_file):
+        """Create a database connection to the SQLite database."""
+        conn = sqlite3.connect(db_file)
+        return conn
+
+    def create_report_table(self):
+        """Create a table for storing reports if it doesn't exist."""
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS reports (
+                id INTEGER PRIMARY KEY,
+                engine TEXT NOT NULL,
+                color TEXT NOT NULL,
+                price REAL NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        ''')
+        self.conn.commit()
+
+    def generate_report(self, car):
+        report = {
+            "engine": car.engine.get_name(),
+            "color": car.color.get_name(),
+            "price": car.engine.get_price() + car.color.get_price(),
+            "created_at": datetime.now().isoformat()
+        }
+        self.reports.append(report)
+        print("Report generated:", report)
+        self.save_report_to_file(report)
+        self.save_report_to_db(report)
+
+    def save_report_to_file(self, report):
+        """Save the report to a JSON file."""
+        with open('reports.json', 'a') as f:
+            f.write(json.dumps(report) + '\n')
+
+    def save_report_to_db(self, report):
+        """Save the report to the SQLite database."""
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            INSERT INTO reports (engine, color, price, created_at) VALUES (?, ?, ?, ?)
+        ''', (report['engine'], report['color'], report['price'], report['created_at']))
+        self.conn.commit()
+
+    def get_reports(self):
+        return self.reports
+
+    def close(self):
+        if self.conn:
+            self.conn.close()
 
 
 if __name__ == "__main__":

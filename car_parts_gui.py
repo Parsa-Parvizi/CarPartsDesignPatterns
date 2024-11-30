@@ -3,7 +3,6 @@ from tkinter import messagebox, simpledialog
 from car_parts import CarPartDatabase, ReportManager
 from tkinter import ttk
 import csv
-import os
 from tkinter import filedialog
 import logging
 from auth import UserAuthentication
@@ -14,14 +13,12 @@ class CarPartsApp:
         self.root = root
         self.root.title("Car Parts Management System")
         self.database = CarPartDatabase()
-        self.database = CarPartDatabase()
 
         self.report_manager = ReportManager()
         self.current_user = None  # Initialize current_user
         self.auth = UserAuthentication()  # UserAuthentication
 
-        self.part_log_manager = PartLogManager()  # Create an instance for part logs
-        self.user_log_manager = UserLogManager()  # Create an instance for user logs
+        # self.part_log_manager = PartLogManager()  # Create an instance for part logs
         self.log_manager = LogManager()  # Create an instance of LogManager
 
         # Create UI elements
@@ -166,9 +163,9 @@ class CarPartsApp:
 
         try:
             price = float(price)
-            self.database.add_part(part_type, part_name, price)
-            self.part_log_manager.log_action(f"Added part: {part_name}, Type: {
-                                             part_type}, Price: ${price:.2f}")
+            # self.database.add_part(part_type, part_name, price)
+            # self.part_log_manager.log_action(f"Added part: {part_name}, Type: {
+            #                                  part_type}, Price: ${price:.2f}")
             messagebox.showinfo("Success", f"Part '{
                                 part_name}' added successfully!")
             self.part_type_entry.delete(0, tk.END)
@@ -314,11 +311,23 @@ class CarPartsApp:
     def register(self):
         """Handle user registration."""
         username = simpledialog.askstring("Register", "Enter a username:")
+        if not username:
+            messagebox.showerror("Input Error", "Username cannot be empty.")
+            return
+
         password = simpledialog.askstring(
             "Register", "Enter a password:", show="*")
+        if not password:
+            messagebox.showerror("Input Error", "Password cannot be empty.")
+            return
 
-        result = self.auth.register(username, password)
-        messagebox.showinfo("Registration", result)
+        # Check if the username already exists
+        if username in self.user_database:
+            messagebox.showerror(
+                "Registration Error", "Username already exists. Please choose a different username.")
+            return
+
+        # Store the username and password
         self.user_database[username] = password
         messagebox.showinfo("Registration Successful",
                             "User  registered successfully!")
@@ -381,26 +390,37 @@ class CarPartsApp:
 
     def check_login_status(self):
         """Check if the user is logged in; if not, prompt for login."""
-        if not self.current_user:
+        if self.current_user:
+            messagebox.showinfo("Welcome", f"Welcome back, {
+                                self.current_user}!")
+        else:
             self.prompt_login()
 
     def prompt_login(self):
-        """Show login dialog."""
-        username = simpledialog.askstring("Login", "Enter your username:")
-        password = simpledialog.askstring(
-            "Login", "Enter your password:", show='*')
+        """Prompt the user for login credentials using a custom form."""
+        login_form = LoginForm(
+            self.root)  # Create an instance of the login form
+        # Wait until the login form is closed
+        self.root.wait_window(login_form)
 
-        if username in self.user_database and self.user_database[username] == password:
-            self.current_user = username
-            messagebox.showinfo("Login Successful", f"Welcome, {username}!")
-            self.logout_button.config(state=tk.NORMAL)
-            self.login_button.config(state=tk.DISABLED)
-            self.register_button.config(state=tk.DISABLED)
-            self.log_manager.log_login(username)  # Log the login action
-        else:
-            messagebox.showerror(
-                "Login Error", "Invalid username or password.")
-            self.prompt_login()  # Prompt again if login fails
+        # Ensure the form is still valid before accessing its entries
+        if login_form.winfo_exists():
+            username = login_form.username_entry.get()  # Get username
+            password = login_form.password_entry.get()  # Get password
+
+            # Validate username and password
+            if username in self.user_database and self.user_database[username] == password:
+                self.current_user = username
+                messagebox.showinfo("Login Successful",
+                                    f"Welcome, {username}!")
+                self.logout_button.config(state=tk.NORMAL)
+                self.login_button.config(state=tk.DISABLED)
+                self.register_button.config(state=tk.DISABLED)
+                self.log_manager.log_login(username)  # Log the login action
+            else:
+                messagebox.showerror(
+                    "Login Error", "Invalid username or password.")
+                self.prompt_login()  # Prompt again if login fails
 
     def on_closing(self):
         """Handle the closing event of the application."""
@@ -410,8 +430,44 @@ class CarPartsApp:
     def clear_all_logs(self):
         """Clear all logs from both log files."""
         self.log_manager.clear_logs()  # Clear part activity logs
-        self.user_log_manager.clear_logs()  # Clear user activity logs
         messagebox.showinfo("Logs Cleared", "All logs have been cleared.")
+
+
+class Inventory:
+    def __init__(self):
+        self.parts = {}
+
+    def add_part(self, part_name, price):
+        """Add a part to the inventory after validating the price."""
+        if self.validate_price(price):
+
+            self.parts[part_name] = float(price)
+            print(f"Part '{part_name}' added with price {price}.")
+        else:
+            print("Invalid price. Please enter a positive number.")
+
+    def validate_price(self, price):
+        """Validate that the price is a positive number."""
+        try:
+            price = float(price)
+            return price > 0
+        except ValueError:
+            return False
+
+    def get_price(self, part_name):
+        """Get the price of a part."""
+        if part_name in self.parts:
+            return self.parts[part_name]
+        else:
+            return None
+
+    def delete_part(self, part_name):
+        """Delete a part from the inventory."""
+        if part_name in self.parts:
+            del self.parts[part_name]
+            return True
+        else:
+            return False
 
 
 class CarPartDatabase:
@@ -459,33 +515,75 @@ class CarPartDatabase:
 
 
 class DataExporter:
-    @staticmethod
-    def export_to_csv(database, filename="car_parts.csv"):
+    def export_to_csv(self, data, filename):
+        """Export data to a CSV file."""
         try:
             with open(filename, mode='w', newline='') as file:
                 writer = csv.writer(file)
-                writer.writerow(["Part Name", "Part Type", "Price"])
-                for part_name, info in database.parts.items():
-                    writer.writerow([part_name, info['type'], info['price']])
-            return filename
-        except OSError as e:
-            messagebox.showerror("Export Error", f"Error exporting data: {e}")
-            return None
+                writer.writerows(data)
+            messagebox.showinfo("Success", "Data exported successfully!")
+        except Exception as e:
+            messagebox.showerror(
+                "Export Error", f"An error occurred while exporting data: {str(e)}")
 
 
 class DataImporter:
-    @staticmethod
-    def import_from_csv(database, filename):
-        if not os.path.exists(filename):
-            return "File not found."
+    def import_from_csv(self, filename):
+        """Import data from a CSV file."""
+        try:
+            with open(filename, mode='r') as file:
+                reader = csv.reader(file)
+                data = [row for row in reader]
+            messagebox.showinfo("Success", "Data imported successfully!")
+            return data
+        except FileNotFoundError:
+            messagebox.showerror(
+                "Import Error", "The specified file was not found.")
+        except Exception as e:
+            messagebox.showerror(
+                "Import Error", f"An error occurred while importing data: {str(e)}")
 
-        with open(filename, mode='r') as file:
-            reader = csv.reader(file)
-            next(reader)  # Skip header
-            for row in reader:
-                part_name, part_type, price = row
-                database.add_part(part_type, part_name, float(price))
-        return "Data imported successfully."
+
+class LoginForm(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Login")
+        self.geometry("300x150")
+
+        self.username_label = tk.Label(self, text="Username:")
+        self.username_label.pack(pady=5)
+
+        self.username_entry = tk.Entry(self)
+        self.username_entry.pack(pady=5)
+
+        self.password_label = tk.Label(self, text="Password:")
+        self.password_label.pack(pady=5)
+
+        self.password_entry = tk.Entry(self, show="*")
+        self.password_entry.pack(pady=5)
+
+        self.login_button = tk.Button(self, text="Login", command=self.login)
+        self.login_button.pack(pady=10)
+
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def login(self):
+        username = self.username_entry.get()
+        password = self.password_entry.get()
+
+        if self.validate_login(username, password):
+            messagebox.showinfo("Login Successful", f"Welcome, {username}!")
+            self.destroy()
+        else:
+            messagebox.showerror(
+                "Login Failed", "Invalid username or password.")
+
+    def validate_login(self, username, password):
+
+        return True
+
+    def on_close(self):
+        self.destroy()
 
 
 class ReportManager:
