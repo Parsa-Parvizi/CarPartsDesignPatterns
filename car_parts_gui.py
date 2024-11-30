@@ -1,11 +1,9 @@
-import tkinter as tk
-from tkinter import messagebox, simpledialog
+from auth import InvalidCredentialsError, TokenVerificationError, UserAuthentication, UsernameAlreadyExistsError
 from car_parts import CarPartDatabase, ReportManager
-from tkinter import ttk
+import tkinter as tk
+from tkinter import ttk, messagebox, simpledialog, filedialog
 import csv
-from tkinter import filedialog
-import logging
-from auth import UserAuthentication
+from logs import LogManager
 
 
 class CarPartsApp:
@@ -15,12 +13,11 @@ class CarPartsApp:
         self.database = CarPartDatabase()
 
         self.report_manager = ReportManager()
-        self.current_user = None  # Initialize current_user
         self.auth = UserAuthentication()  # UserAuthentication
 
         # self.part_log_manager = PartLogManager()  # Create an instance for part logs
         self.log_manager = LogManager()  # Create an instance of LogManager
-
+        self.current_user = None
         # Create UI elements
         self.create_widgets()
 
@@ -36,7 +33,7 @@ class CarPartsApp:
 
         # Frame for login and registration
         frame_auth = tk.Frame(self.root, bg="#ffffff", padx=10, pady=10)
-        frame_auth.pack(pady=10)
+        frame_auth.pack(pady=5)
 
         # Username Label
         tk.Label(frame_auth, text="Username:", bg="#ffffff", font=(
@@ -55,7 +52,7 @@ class CarPartsApp:
         self.login_button.grid(row=1, column=2, padx=5, pady=5)
 
         self.register_button = tk.Button(
-            frame_auth, text="Register", command=self.register, bg="#4CAF50", fg="white", font=("central", 12))
+            frame_auth, text="Register", command=self.register_user, bg="#4CAF50", fg="white", font=("central", 12))
         self.register_button.grid(row=1, column=3, padx=5, pady=5)
 
         self.logout_button = tk.Button(
@@ -64,8 +61,8 @@ class CarPartsApp:
 
         # Frame for adding parts
         frame_add = tk.Frame(self.root, bg="#ffffff",
-                             padx=10, pady=10)
-        frame_add.pack(pady=10)
+                             padx=5, pady=5)
+        frame_add.pack(pady=5)
 
         tk.Label(frame_add, text="Part Type:", bg="#ffffff", font=("central", 12)).grid(
             row=0, column=0, sticky="w")
@@ -87,8 +84,8 @@ class CarPartsApp:
         self.add_part_button.grid(row=3, columnspan=2, pady=5)
 
         # Frame for retrieving parts
-        frame_retrieve = tk.Frame(self.root, bg="#ffffff", padx=10, pady=10)
-        frame_retrieve.pack(pady=10)
+        frame_retrieve = tk.Frame(self.root, bg="#ffffff", padx=5, pady=5)
+        frame_retrieve.pack(pady=5)
 
         tk.Label(frame_retrieve, text="Retrieve Part:",
                  bg="#ffffff").grid(row=0, column=0, sticky="w")
@@ -101,8 +98,8 @@ class CarPartsApp:
         self.retrieve_button.grid(row=0, column=2, padx=5, pady=5)
 
         # Frame for generating reports
-        frame_report = tk.Frame(self.root, bg="#ffffff", padx=10, pady=10)
-        frame_report.pack(pady=10)
+        frame_report = tk.Frame(self.root, bg="#ffffff", padx=5, pady=5)
+        frame_report.pack(pady=5)
 
         self.generate_report_button = tk.Button(
             frame_report, text="Generate Report", command=self.generate_report, bg="#FF9800", fg="white", font=("central", 12))
@@ -110,7 +107,7 @@ class CarPartsApp:
 
         # Frame for viewing database
         frame_view = tk.Frame(self.root, bg="#ffffff", padx=10, pady=10)
-        frame_view.pack(pady=10)
+        frame_view.pack(pady=5)
 
         self.view_database_button = tk.Button(
             frame_view, text="View Database", command=self.view_database, bg="#9C27B0", fg="white", font=("central", 12))
@@ -119,11 +116,11 @@ class CarPartsApp:
         # Help button
         self.help_button = tk.Button(
             self.root, text="Help", command=self.show_help, bg="#607D8B", fg="white", font=("central", 12))
-        self.help_button.pack(pady=10)
+        self.help_button.pack(pady=5)
 
         # Frame for data import/export
-        frame_data = tk.Frame(self.root, bg="#ffffff", padx=10, pady=10)
-        frame_data.pack(pady=10)
+        frame_data = tk.Frame(self.root, bg="#ffffff", padx=5, pady=5)
+        frame_data.pack(pady=5)
 
         self.export_button = tk.Button(
             frame_data, text="Export to CSV", command=self.export_data, bg="#FFC107", fg="white", font=("central", 12))
@@ -135,22 +132,24 @@ class CarPartsApp:
         # self.import_button.pack(pady=5)
         self.import_button.grid(row=0, column=1, padx=5, pady=5)
 
+        # Frame for logging
+        frame_logging = tk.Frame(self.root, bg="#ffffff", padx=10, pady=10)
+        frame_logging.pack(pady=5)
+
         # Log Activity button
         self.log_activity_button = tk.Button(
-            self.root, text="Log Activity", command=self.show_logs, bg="#FF9800", fg="white", font=("central", 12))
-        self.log_activity_button.pack(
-            padx=100, side=tk.LEFT)
+            frame_logging, text="Log Activity", command=self.show_logs, bg="#FF9800", fg="white", font=("central", 12))
+        self.log_activity_button.pack(side=tk.LEFT, padx=5)
 
         # Log Registration button
         self.log_registration_button = tk.Button(
-            self.root, text="Log Registration", command=self.show_registration_logs, bg="#4CAF50", fg="white", font=("central", 12))
-        self.log_registration_button.pack(
-            padx=100, side=tk.RIGHT)
+            frame_logging, text="Log Registration", command=self.show_registration_logs, bg="#4CAF50", fg="white", font=("central", 12))
+        self.log_registration_button.pack(side=tk.LEFT, padx=5)
 
         # Clear Logs button
         self.clear_logs_button = tk.Button(
             self.root, text="Clear All Logs", command=self.clear_all_logs, bg="#FF5722", fg="white", font=("central", 12))
-        self.clear_logs_button.pack(pady=10)
+        self.clear_logs_button.pack(pady=5)
 
     def add_part(self):
         part_type = self.part_type_entry.get()
@@ -308,69 +307,66 @@ class CarPartsApp:
             messagebox.showwarning(
                 "No File Selected", "Please select a file to import.")
 
-    def register(self):
-        """Handle user registration."""
-        username = simpledialog.askstring("Register", "Enter a username:")
-        if not username:
-            messagebox.showerror("Input Error", "Username cannot be empty.")
-            return
-
-        password = simpledialog.askstring(
-            "Register", "Enter a password:", show="*")
-        if not password:
-            messagebox.showerror("Input Error", "Password cannot be empty.")
-            return
-
-        # Check if the username already exists
-        if username in self.user_database:
-            messagebox.showerror(
-                "Registration Error", "Username already exists. Please choose a different username.")
-            return
-
-        # Store the username and password
-        self.user_database[username] = password
-        messagebox.showinfo("Registration Successful",
-                            "User  registered successfully!")
+    def register_user(self):
+        username = self.username_entry.get()
+        password = self.password_entry.get()
+        try:
+            message = self.auth.register(username, password)
+            messagebox.showinfo("Registration Successful", message)
+        except UsernameAlreadyExistsError as e:
+            messagebox.showerror("Registration Error", str(e))
 
     def login(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
-
-        token = self.auth.login(username, password)
-        if isinstance(token, str) and len(token) == 6:
+        try:
+            token = self.auth.login(username, password)
             messagebox.showinfo("2FA Token", f"Your 2FA token is: {token}")
             entered_token = simpledialog.askstring(
                 "2FA Verification", "Enter your 2FA token:")
-
             if self.auth.verify_token(username, entered_token):
-                self.current_user = username
-                self.logout_button
-                self.logout_button.config(state=tk.NORMAL)
-                self.login_button.config(state=tk.DISABLED)
-                self.register_button.config(state=tk.DISABLED)
-                self.log_manager.log_login(username)  # Log the login action
                 messagebox.showinfo("Login Successful",
                                     f"Welcome, {username}!")
             else:
                 messagebox.showerror("Login Error", "Invalid 2FA token.")
-        else:
-            messagebox.showerror("Login Error", token)
+        except InvalidCredentialsError as e:
+            messagebox.showerror("Login Error", str(e))
+        except TokenVerificationError as e:
+            messagebox.showerror("Token Verification Error", str(e))
 
     def logout(self):
+        """Handle user logout process."""
         if self.current_user:
-            self.log_manager.log_logout(
-                self.current_user)  # Log the logout action
-            self.current_user = None
-            self.logout_button.config(state=tk.DISABLED)
-            self.login_button.config(state=tk.NORMAL)
-            self.register_button.config(state=tk.NORMAL)
-            messagebox.showinfo("Logout Successful",
-                                "You have been logged out.")
+            try:
+                # Attempt to log out the user
+                message = self.auth.logout(self.current_user)
+                self.log_manager.log_logout(self.current_user)
+                self.current_user = None
+
+                # Update UI elements
+                self.logout_button.config(state=tk.DISABLED)
+                self.login_button.config(state=tk.NORMAL)
+                self.register_button.config(state=tk.NORMAL)
+
+                # Provide feedback to the user
+                messagebox.showinfo("Logout Successful", message)
+            except Exception as e:
+                # Handle any exceptions that occur during logout
+                messagebox.showerror(
+                    "Logout Error", f"An error occurred: {str(e)}")
+        else:
+            messagebox.showwarning(
+                "Logout Warning", "No user is currently logged in.")
+
+    def on_closing(self):
+        """Handle the closing event of the application."""
+        if messagebox.askokcancel("Quit", "Do you want to quit?"):
+            self.root.destroy()
 
     def show_registration_logs(self):
-        # Create a new window to display registration logs
+        """Create a new window to display user login/logout logs."""
         reg_log_window = tk.Toplevel(self.root)
-        reg_log_window.title("Login/Logout Log Details")
+        reg_log_window.title("User  Login/Logout Log Details")
         reg_log_window.geometry("600x400")
 
         reg_log_text = tk.Text(reg_log_window)
@@ -378,8 +374,13 @@ class CarPartsApp:
 
         # Get only login/logout logs
         login_logout_logs = self.log_manager.get_login_logout_logs()
-        for log in login_logout_logs:
-            reg_log_text.insert(tk.END, log)
+
+        # Check if there are any logs to display
+        if login_logout_logs:
+            for log in login_logout_logs:
+                reg_log_text.insert(tk.END, log)
+        else:
+            reg_log_text.insert(tk.END, "No login/logout logs available.")
 
         # Make the text widget read-only
         reg_log_text.config(state=tk.DISABLED)
@@ -391,41 +392,13 @@ class CarPartsApp:
     def check_login_status(self):
         """Check if the user is logged in; if not, prompt for login."""
         if self.current_user:
+            # Provide a welcome message to the logged-in user
             messagebox.showinfo("Welcome", f"Welcome back, {
                                 self.current_user}!")
         else:
-            self.prompt_login()
-
-    def prompt_login(self):
-        """Prompt the user for login credentials using a custom form."""
-        login_form = LoginForm(
-            self.root)  # Create an instance of the login form
-        # Wait until the login form is closed
-        self.root.wait_window(login_form)
-
-        # Ensure the form is still valid before accessing its entries
-        if login_form.winfo_exists():
-            username = login_form.username_entry.get()  # Get username
-            password = login_form.password_entry.get()  # Get password
-
-            # Validate username and password
-            if username in self.user_database and self.user_database[username] == password:
-                self.current_user = username
-                messagebox.showinfo("Login Successful",
-                                    f"Welcome, {username}!")
-                self.logout_button.config(state=tk.NORMAL)
-                self.login_button.config(state=tk.DISABLED)
-                self.register_button.config(state=tk.DISABLED)
-                self.log_manager.log_login(username)  # Log the login action
-            else:
-                messagebox.showerror(
-                    "Login Error", "Invalid username or password.")
-                self.prompt_login()  # Prompt again if login fails
-
-    def on_closing(self):
-        """Handle the closing event of the application."""
-        if messagebox.askokcancel("Quit", "Do you want to quit?"):
-            self.root.destroy()
+            # Inform the user that they need to log in
+            messagebox.showinfo(
+                "Login Required", "You need to log in to access the Car Parts Management System. Please enter your credentials.")
 
     def clear_all_logs(self):
         """Clear all logs from both log files."""
@@ -543,30 +516,6 @@ class DataImporter:
             messagebox.showerror(
                 "Import Error", f"An error occurred while importing data: {str(e)}")
 
-
-class LoginForm(tk.Toplevel):
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.title("Login")
-        self.geometry("300x150")
-
-        self.username_label = tk.Label(self, text="Username:")
-        self.username_label.pack(pady=5)
-
-        self.username_entry = tk.Entry(self)
-        self.username_entry.pack(pady=5)
-
-        self.password_label = tk.Label(self, text="Password:")
-        self.password_label.pack(pady=5)
-
-        self.password_entry = tk.Entry(self, show="*")
-        self.password_entry.pack(pady=5)
-
-        self.login_button = tk.Button(self, text="Login", command=self.login)
-        self.login_button.pack(pady=10)
-
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
-
     def login(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
@@ -594,83 +543,12 @@ class ReportManager:
         return report if database.parts else "No parts available."
 
 
-class LogManager:
-    def __init__(self):
-        logging.basicConfig(filename='car_parts.log', level=logging.INFO,
-                            format='%(asctime)s - %(levelname)s - %(message)s')
-
-    def log_action(self, action):
-        """Log an action performed in the application related to parts."""
-        if "logged in" not in action and "logged out" not in action:
-            logging.info(action)
-
-    def log_login(self, username):
-        """Log user login."""
-        logging.info(f"User  '{username}' logged in.")
-
-    def log_logout(self, username):
-        """Log user logout."""
-        logging.info(f"User  '{username}' logged out.")
-
-    def get_logs(self):
-        """Retrieve the log contents."""
-        with open('car_parts.log', 'r') as file:
-            return file.readlines()
-
-    def get_login_logout_logs(self):
-        """Retrieve only login and logout logs."""
-        with open('car_parts.log', 'r') as file:
-            all_logs = file.readlines()
-            # Filter logs for login and logout actions
-            login_logout_logs = [
-                log for log in all_logs if "logged in" in log or "logged out" in log]
-        return login_logout_logs
-
-    def clear_logs(self):
-        """Clear all logs."""
-        open('car_parts.log', 'w').close()  # Clear the log file
-
-
-class PartLogManager:
-    def __init__(self):
-        logging.basicConfig(filename='part_activity.log', level=logging.INFO,
-                            format='%(asctime)s - %(levelname)s - %(message)s')
-
-    def log_action(self, action):
-        """Log an action performed in the application related to parts."""
-        logging.info(action)
-
-    def get_logs(self):
-        """Retrieve the log contents."""
-        with open('part_activity.log', 'r') as file:
-            return file.readlines()
-
-
-class UserLogManager:
-    def __init__(self):
-        logging.basicConfig(filename='user_activity.log', level=logging.INFO,
-                            format='%(asctime)s - %(levelname)s - %(message)s')
-
-    def log_login(self, username):
-        """Log user login."""
-        logging.info(f"User  '{username}' logged in.")
-
-    def log_logout(self, username):
-        """Log user logout."""
-        logging.info(f"User  '{username}' logged out.")
-
-    def get_login_logout_logs(self):
-        """Retrieve only login and logout logs."""
-        with open('user_activity.log', 'r') as file:
-            return file.readlines()
-
-    def clear_logs(self):
-        """Clear all user logs."""
-        open('user_activity.log', 'w').close()  # Clear the log file
-
-
 if __name__ == "__main__":
     root = tk.Tk()
     app = CarPartsApp(root)
-    root.geometry("800x900")  # Increase the window size
+    root.geometry("800x655")  # Increase the window size
+    # label = tk.Label(root)
+    # label.place(x=70, y=80)
+    # Center the window using eval
+    # root.eval('tk::PlaceWindow . center')
     root.mainloop()
