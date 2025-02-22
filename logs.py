@@ -2,16 +2,20 @@ import logging
 
 
 class BaseLogManager:
-    """Base class for logging management."""
+    """کلاس پایه برای مدیریت لاگ‌ها"""
 
     def __init__(self, filename):
         self.filename = filename
         self.setup_logging()
 
     def setup_logging(self):
-        """Setup logging configuration."""
-        logging.basicConfig(filename=self.filename, level=logging.INFO,
-                            format='%(asctime)s - %(levelname)s - %(message)s')
+        """تنظیم پیکربندی لاگ‌گذاری"""
+        logging.basicConfig(
+            filename=self.filename,
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
 
     def get_logs(self):
         """Retrieve the log contents."""
@@ -35,11 +39,15 @@ class BaseLogManager:
 class LogManager(BaseLogManager):
     def __init__(self):
         super().__init__('car_parts.log')
+        self.setup_logging()
 
     def log_action(self, action):
-        """Log an action performed in the application related to parts."""
-        if "logged in" not in action and "logged out" not in action:
-            logging.info(action)
+        """ثبت یک عملیات با مدیریت خطا"""
+        try:
+            if "logged in" not in action and "logged out" not in action:
+                logging.info(action)
+        except Exception as e:
+            print(f"خطا در ثبت عملیات: {e}")
 
     def log_login(self, username):
         """Log user login."""

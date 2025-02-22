@@ -5,6 +5,8 @@ from car_parts import CarPartDatabase, Engine
 class TestCarPartDatabase(unittest.TestCase):
 
     def setUp(self):
+        """Reset the singleton instance before each test."""
+        CarPartDatabase._instances = {}  # Reset singleton instance
         self.database = CarPartDatabase()
         self.database.add_part("Engine", "V8", 1000)
         self.database.add_part("Color", "Red", 500)

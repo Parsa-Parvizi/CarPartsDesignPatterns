@@ -1,154 +1,182 @@
-from auth import InvalidCredentialsError, TokenVerificationError, UserAuthentication, UsernameAlreadyExistsError
-from car_parts import CarPartDatabase, ReportManager
-import tkinter as tk
+from tkinter import *
 from tkinter import ttk, messagebox, simpledialog, filedialog
-import csv
+import tkinter as tk
+from car_parts import CarPartDatabase, ReportManager
+from auth import UserAuthentication, InvalidCredentialsError, TokenVerificationError, UsernameAlreadyExistsError
 from logs import LogManager
 
 
 class CarPartsApp:
     def __init__(self, root):
+        """راه‌اندازی اولیه برنامه و ایجاد رابط کاربری"""
         self.root = root
-        self.root.title("Car Parts Management System")
+        self.root.title("سیستم مدیریت قطعات خودرو")
+        
+        # Initialize components
         self.database = CarPartDatabase()
-
         self.report_manager = ReportManager()
-        self.auth = UserAuthentication()  # UserAuthentication
-
-        # self.part_log_manager = PartLogManager()  # Create an instance for part logs
-        self.log_manager = LogManager()  # Create an instance of LogManager
+        self.auth = UserAuthentication()
+        self.log_manager = LogManager()
         self.current_user = None
-        # Create UI elements
+        
+        # Create UI
         self.create_widgets()
-
-        # Check login status when the app starts
+        
+        # بررسی وضعیت ورود در شروع برنامه
         self.check_login_status()
 
         # Bind the closing event to the on_closing method
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def create_widgets(self):
-        # Set background color
-        self.root.configure(bg="#f0f0f0")
+        # تنظیم استایل‌ها
+        style = ttk.Style()
+        style.configure("Add.TButton", foreground="white", background="#4CAF50", font=("central", 12))
+        style.configure("Get.TButton", foreground="white", background="#2196F3", font=("central", 12))
+        style.configure("Report.TButton", foreground="white", background="#FF9800", font=("central", 12))
+        style.configure("View.TButton", foreground="white", background="#9C27B0", font=("central", 12))
+        style.configure("Help.TButton", foreground="white", background="#607D8B", font=("central", 12))
 
-        # Frame for login and registration
-        frame_auth = tk.Frame(self.root, bg="#ffffff", padx=10, pady=10)
-        frame_auth.pack(pady=5)
-
-        # Username Label
-        tk.Label(frame_auth, text="Username:", bg="#ffffff", font=(
-            "central", 12)).grid(row=0, column=0, sticky="w")
-        self.username_entry = tk.Entry(frame_auth)
-        self.username_entry.grid(row=1, column=0, padx=5, pady=5)
-
-        # Password Label
-        tk.Label(frame_auth, text="Password:", bg="#ffffff", font=(
-            "central", 12)).grid(row=0, column=1, sticky="w")
-        self.password_entry = tk.Entry(frame_auth, show="*")
+        # Login Frame
+        login_frame = ttk.LabelFrame(self.root, text="ورود به سیستم", padding=(10, 5))
+        login_frame.pack(fill="x", padx=10, pady=5)
+        
+        ttk.Label(login_frame, text="نام کاربری:").grid(row=0, column=0, padx=5, pady=5)
+        self.username_entry = ttk.Entry(login_frame)
+        self.username_entry.grid(row=0, column=1, padx=5, pady=5)
+        
+        ttk.Label(login_frame, text="رمز عبور:").grid(row=1, column=0, padx=5, pady=5)
+        self.password_entry = ttk.Entry(login_frame, show="*")
         self.password_entry.grid(row=1, column=1, padx=5, pady=5)
-
-        self.login_button = tk.Button(
-            frame_auth, text="Login", command=self.login, bg="#2196F3", fg="white", font=("central", 12))
-        self.login_button.grid(row=1, column=2, padx=5, pady=5)
-
-        self.register_button = tk.Button(
-            frame_auth, text="Register", command=self.register_user, bg="#4CAF50", fg="white", font=("central", 12))
-        self.register_button.grid(row=1, column=3, padx=5, pady=5)
-
-        self.logout_button = tk.Button(
-            frame_auth, text="Logout", command=self.logout, bg="#FF5722", fg="white", font=("central", 12))
-        self.logout_button.grid(row=1, column=4, padx=5, pady=5)
+        
+        ttk.Button(login_frame, text="ورود", command=self.login, style="Add.TButton").grid(row=2, column=0, padx=5, pady=5)
+        ttk.Button(login_frame, text="ثبت‌نام", command=self.register_user, style="Get.TButton").grid(row=2, column=1, padx=5, pady=5)
 
         # Frame for adding parts
-        frame_add = tk.Frame(self.root, bg="#ffffff",
-                             padx=5, pady=5)
+        frame_add = ttk.LabelFrame(self.root, text="اضافه کردن قطعه", padding=(5, 5))
         frame_add.pack(pady=5)
 
-        tk.Label(frame_add, text="Part Type:", bg="#ffffff", font=("central", 12)).grid(
-            row=0, column=0, sticky="w")
-        self.part_type_entry = tk.Entry(frame_add)
+        ttk.Label(frame_add, text="نوع قطعه:").grid(row=0, column=0, sticky="w")
+        self.part_type_entry = ttk.Entry(frame_add)
         self.part_type_entry.grid(row=0, column=1, padx=5, pady=5)
 
-        tk.Label(frame_add, text="Part Name:", bg="#ffffff", font=("central", 12)).grid(
-            row=1, column=0, sticky="w")
-        self.part_name_entry = tk.Entry(frame_add)
+        ttk.Label(frame_add, text="نام قطعه:").grid(row=1, column=0, sticky="w")
+        self.part_name_entry = ttk.Entry(frame_add)
         self.part_name_entry.grid(row=1, column=1, padx=5, pady=5)
 
-        tk.Label(frame_add, text="Price:", bg="#ffffff", font=("central", 12)).grid(
-            row=2, column=0, sticky="w")
-        self.price_entry = tk.Entry(frame_add)
+        ttk.Label(frame_add, text="قیمت:").grid(row=2, column=0, sticky="w")
+        self.price_entry = ttk.Entry(frame_add)
         self.price_entry.grid(row=2, column=1, padx=5, pady=5)
 
-        self.add_part_button = tk.Button(
-            frame_add, text="Add Part", command=self.add_part, bg="#4CAF50", fg="white", font=("central", 12))
+        self.add_part_button = ttk.Button(
+            frame_add, 
+            text="اضافه کردن قطعه", 
+            command=self.add_part, 
+            style="Add.TButton"
+        )
         self.add_part_button.grid(row=3, columnspan=2, pady=5)
 
         # Frame for retrieving parts
-        frame_retrieve = tk.Frame(self.root, bg="#ffffff", padx=5, pady=5)
+        frame_retrieve = ttk.LabelFrame(self.root, text="دریافت قیمت قطعه", padding=(5, 5))
         frame_retrieve.pack(pady=5)
 
-        tk.Label(frame_retrieve, text="Retrieve Part:",
-                 bg="#ffffff").grid(row=0, column=0, sticky="w")
+        ttk.Label(frame_retrieve, text="دریافت قطعه:").grid(row=0, column=0, sticky="w")
         # self.database.validate_price(price)  # Validate price before adding
-        self.retrieve_part_entry = tk.Entry(frame_retrieve)
+        self.retrieve_part_entry = ttk.Entry(frame_retrieve)
         self.retrieve_part_entry.grid(row=0, column=1, padx=5, pady=5)
 
-        self.retrieve_button = tk.Button(
-            frame_retrieve, text="Get Price", command=self.get_price, bg="#2196F3", fg="white", font=("central", 12))
+        self.retrieve_button = ttk.Button(
+            frame_retrieve, 
+            text="دریافت قیمت", 
+            command=self.get_price, 
+            style="Get.TButton"
+        )
         self.retrieve_button.grid(row=0, column=2, padx=5, pady=5)
 
         # Frame for generating reports
-        frame_report = tk.Frame(self.root, bg="#ffffff", padx=5, pady=5)
+        frame_report = ttk.LabelFrame(self.root, text="تولید گزارش", padding=(5, 5))
         frame_report.pack(pady=5)
 
-        self.generate_report_button = tk.Button(
-            frame_report, text="Generate Report", command=self.generate_report, bg="#FF9800", fg="white", font=("central", 12))
+        self.generate_report_button = ttk.Button(
+            frame_report, 
+            text="تولید گزارش", 
+            command=self.generate_report, 
+            style="Report.TButton"
+        )
         self.generate_report_button.pack(pady=5)
 
         # Frame for viewing database
-        frame_view = tk.Frame(self.root, bg="#ffffff", padx=10, pady=10)
+        frame_view = ttk.LabelFrame(self.root, text="نمایش دیتابیس", padding=(10, 10))
         frame_view.pack(pady=5)
 
-        self.view_database_button = tk.Button(
-            frame_view, text="View Database", command=self.view_database, bg="#9C27B0", fg="white", font=("central", 12))
+        self.view_database_button = ttk.Button(
+            frame_view, 
+            text="نمایش دیتابیس", 
+            command=self.view_database, 
+            style="View.TButton"
+        )
         self.view_database_button.pack(pady=5)
 
         # Help button
-        self.help_button = tk.Button(
-            self.root, text="Help", command=self.show_help, bg="#607D8B", fg="white", font=("central", 12))
+        self.help_button = ttk.Button(
+            self.root, 
+            text="راهنما", 
+            command=self.show_help, 
+            style="Help.TButton"
+        )
         self.help_button.pack(pady=5)
 
         # Frame for data import/export
-        frame_data = tk.Frame(self.root, bg="#ffffff", padx=5, pady=5)
+        frame_data = ttk.LabelFrame(self.root, text="وارد کردن/خروج دیتا", padding=(5, 5))
         frame_data.pack(pady=5)
 
-        self.export_button = tk.Button(
-            frame_data, text="Export to CSV", command=self.export_data, bg="#FFC107", fg="white", font=("central", 12))
+        self.export_button = ttk.Button(
+            frame_data, 
+            text="خروج به CSV", 
+            command=self.export_data, 
+            style="Get.TButton"
+        )
         self.export_button.pack(pady=5)
         self.export_button.grid(row=0, column=0, padx=5, pady=5)
 
-        self.import_button = tk.Button(frame_data, text="Import from CSV",
-                                       command=self.import_data, bg="#FF5722", fg="white", font=("central", 12))
+        self.import_button = ttk.Button(
+            frame_data, 
+            text="وارد کردن از CSV", 
+            command=self.import_data, 
+            style="Add.TButton"
+        )
         # self.import_button.pack(pady=5)
         self.import_button.grid(row=0, column=1, padx=5, pady=5)
 
         # Frame for logging
-        frame_logging = tk.Frame(self.root, bg="#ffffff", padx=10, pady=10)
+        frame_logging = ttk.LabelFrame(self.root, text="نمایش لاگ", padding=(10, 10))
         frame_logging.pack(pady=5)
 
         # Log Activity button
-        self.log_activity_button = tk.Button(
-            frame_logging, text="Log Activity", command=self.show_logs, bg="#FF9800", fg="white", font=("central", 12))
+        self.log_activity_button = ttk.Button(
+            frame_logging, 
+            text="نمایش لاگ عملیات", 
+            command=self.show_logs, 
+            style="Report.TButton"
+        )
         self.log_activity_button.pack(side=tk.LEFT, padx=5)
 
         # Log Registration button
-        self.log_registration_button = tk.Button(
-            frame_logging, text="Log Registration", command=self.show_registration_logs, bg="#4CAF50", fg="white", font=("central", 12))
+        self.log_registration_button = ttk.Button(
+            frame_logging, 
+            text="نمایش لاگ ثبت‌نام", 
+            command=self.show_registration_logs, 
+            style="Add.TButton"
+        )
         self.log_registration_button.pack(side=tk.LEFT, padx=5)
 
         # Clear Logs button
-        self.clear_logs_button = tk.Button(
-            self.root, text="Clear All Logs", command=self.clear_all_logs, bg="#FF5722", fg="white", font=("central", 12))
+        self.clear_logs_button = ttk.Button(
+            self.root, 
+            text="پاک کردن همه لاگ", 
+            command=self.clear_all_logs, 
+            style="Get.TButton"
+        )
         self.clear_logs_button.pack(pady=5)
 
     def add_part(self):
@@ -157,7 +185,7 @@ class CarPartsApp:
         price = self.price_entry.get()
 
         if not part_type or not part_name or not price:
-            messagebox.showerror("Input Error", "All fields are required!")
+            messagebox.showerror("خطا در ورود اطلاعات", "همه فیلدها اجباری هستند!")
             return
 
         try:
@@ -165,13 +193,13 @@ class CarPartsApp:
             # self.database.add_part(part_type, part_name, price)
             # self.part_log_manager.log_action(f"Added part: {part_name}, Type: {
             #                                  part_type}, Price: ${price:.2f}")
-            messagebox.showinfo("Success", f"Part '{
-                                part_name}' added successfully!")
-            self.part_type_entry.delete(0, tk.END)
-            self.part_name_entry.delete(0, tk.END)
-            self.price_entry.delete(0, tk.END)
+            messagebox.showinfo("موفقیت", f"قطعه '{
+                                part_name}' با موفقیت اضافه شد!")
+            self.part_type_entry.delete(0, ttk.END)
+            self.part_name_entry.delete(0, ttk.END)
+            self.price_entry.delete(0, ttk.END)
         except ValueError:
-            messagebox.showerror("Input Error", "Price must be a number!")
+            messagebox.showerror("خطا در ورود اطلاعات", "قیمت باید یک عدد باشد!")
 
     def get_price(self):
         part_name = self.retrieve_part_entry.get()
@@ -179,10 +207,10 @@ class CarPartsApp:
         price = self.database.get_price("Engine", part_name)
 
         if price is not None:
-            messagebox.showinfo("Price", f"The price of '{
-                                part_name}' is {price}.")
+            messagebox.showinfo("قیمت", f"قیمت '{
+                                part_name}' برابر است با {price}.")
         else:
-            messagebox.showerror("Not Found", f"Part '{part_name}' not found.")
+            messagebox.showerror("پیدا نشد", f"قطعه '{part_name}' پیدا نشد.")
 
     def get_registration_logs(self):
         # Implement this method to return registration logs
@@ -190,52 +218,58 @@ class CarPartsApp:
 
     def edit_part(self):
         part_name = simpledialog.askstring(
-            "Edit Part", "Enter the name of the part to edit:")
+            "ویرایش قطعه", "نام قطعه مورد نظر را وارد کنید:")
         if part_name:
             new_price = simpledialog.askfloat(
-                "Edit Price", "Enter the new price:")
+                "ویرایش قیمت", "قیمت جدید را وارد کنید:")
             if new_price is not None:
                 success = self.database.edit_part(part_name, new_price)
                 if success:
-                    messagebox.showinfo("Success", f"Part '{
-                                        part_name}' updated successfully!")
+                    messagebox.showinfo("موفقیت", f"قطعه '{
+                                        part_name}' با موفقیت به روز شد!")
                 else:
-                    messagebox.showerror("Not Found", f"Part '{
-                        part_name}' not found.")
+                    messagebox.showerror("پیدا نشد", f"قطعه '{
+                        part_name}' پیدا نشد.")
 
     def delete_part(self):
         part_name = simpledialog.askstring(
-            "Delete Part", "Enter the name of the part to delete:")
+            "حذف قطعه", "نام قطعه مورد نظر را وارد کنید:")
         if part_name:
             success = self.database.delete_part(part_name)
             if success:
-                messagebox.showinfo("Success", f"Part '{
-                                    part_name}'deleted successfully!")
+                messagebox.showinfo("موفقیت", f"قطعه '{
+                                    part_name}' با موفقیت حذف شد!")
             else:
-                messagebox.showerror("Not Found", f"Part '{
-                    part_name}' not found.")
+                messagebox.showerror("پیدا نشد", f"قطعه '{
+                    part_name}' پیدا نشد.")
 
     def show_logs(self):
         logs = self.log_manager.get_logs()
-        log_window = tk.Toplevel(self.root)
-        log_window.title("Log Details")
+        log_window = Toplevel(self.root)
+        log_window.title("جزئیات لاگ")
         log_window.geometry("600x400")
 
         log_text = tk.Text(log_window)
         log_text.pack(fill=tk.BOTH, expand=True)
 
         for log in logs:
-            log_text.insert(tk.END, log)
+            log_text.insert(END, log)
 
-        log_text.config(state=tk.DISABLED)  # Make the text widget read-only
+        log_text.config(state=DISABLED)  # Make the text widget read-only
 
         close_button = tk.Button(
-            log_window, text="Close", command=log_window.destroy)
+            log_window, 
+            text="بستن", 
+            command=log_window.destroy,
+            bg="#4CAF50",
+            fg="white",
+            font=("central", 12)
+        )
         close_button.pack(pady=10)
 
     def generate_report(self):
         report = self.report_manager.generate_report(self.database)
-        messagebox.showinfo("Report", report)
+        messagebox.showinfo("گزارش", report)
 
     def show_help(self):
         help_message = (
@@ -249,20 +283,20 @@ class CarPartsApp:
             "- Generate a report of all parts.\n\n"
             "To use the application, simply fill in the fields and click the corresponding buttons."
         )
-        messagebox.showinfo("Help", help_message)
+        messagebox.showinfo("راهنما", help_message)
 
     def view_database(self):
         # Create a new window to display the database
-        view_window = tk.Toplevel(self.root)
-        view_window.title("Database View")
+        view_window = Toplevel(self.root)
+        view_window.title("نمایش دیتابیس")
         view_window.geometry("600x400")  # Set a larger window size
 
         # Create a Treeview widget with additional columns
         tree = ttk.Treeview(view_window, columns=(
             "Type", "Name", "Price"), show='headings')
-        tree.heading("Type", text="Part Type")
-        tree.heading("Name", text="Part Name")
-        tree.heading("Price", text="Price")
+        tree.heading("Type", text="نوع قطعه")
+        tree.heading("Name", text="نام قطعه")
+        tree.heading("Price", text="قیمت")
 
         # Set column widths
         tree.column("Type", width=150)
@@ -271,7 +305,10 @@ class CarPartsApp:
 
         # Add a vertical scrollbar
         scrollbar = ttk.Scrollbar(
-            view_window, orient="vertical", command=tree.yview)
+            view_window, 
+            orient="vertical", 
+            command=tree.yview
+        )
         tree.configure(yscroll=scrollbar.set)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
@@ -280,55 +317,64 @@ class CarPartsApp:
 
         # Insert data into the Treeview
         for part_name, info in self.database.parts.items():
-            tree.insert("", tk.END, values=(
+            tree.insert("", END, values=(
                 info['type'], part_name, f"${info['price']:.2f}"))
 
         # Add a button to close the window
         close_button = tk.Button(
-            view_window, text="Close", command=view_window.destroy)
+            view_window, text="بستن", command=view_window.destroy)
         close_button.pack(pady=10)
 
     def export_data(self):
         filename = DataExporter.export_to_csv(self.database)
-        messagebox.showinfo("Export Successful",
-                            f"Data exported to {filename}.")
+        messagebox.showinfo("خروج به CSV موفق",
+                            f"دیتا با موفقیت به فایل {filename} خروج داده شد.")
 
     def import_data(self):
         # Open a file dialog to select a CSV file
         filename = filedialog.askopenfilename(
-            title="Select a CSV file",
-            filetypes=(("CSV files", "*.csv"), ("All files", "*.*"))
+            title="انتخاب فایل CSV",
+            filetypes=(("فایل‌های CSV", "*.csv"), ("فایل‌های دیگر", "*.*"))
         )
 
         if filename:  # Check if a file was selected
             result = DataImporter.import_from_csv(self.database, filename)
-            messagebox.showinfo("Import Result", result)
+            messagebox.showinfo("نتیجه وارد کردن", result)
         else:
             messagebox.showwarning(
-                "No File Selected", "Please select a file to import.")
+                "فایل انتخاب نشده", "لطفا یک فایل برای وارد کردن انتخاب کنید.")
 
     def register_user(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
         try:
             message = self.auth.register(username, password)
-            messagebox.showinfo("Registration Successful", message)
+            messagebox.showinfo("ثبت‌نام موفق", message)
         except UsernameAlreadyExistsError as e:
-            messagebox.showerror("Registration Error", str(e))
+            messagebox.showerror("خطا در ثبت‌نام", str(e))
 
     def login(self):
+        """مدیریت ورود کاربر"""
         username = self.username_entry.get()
         password = self.password_entry.get()
         try:
             token = self.auth.login(username, password)
-            messagebox.showinfo("2FA Token", f"Your 2FA token is: {token}")
-            entered_token = simpledialog.askstring(
-                "2FA Verification", "Enter your 2FA token:")
-            if self.auth.verify_token(username, entered_token):
-                messagebox.showinfo("Login Successful",
-                                    f"Welcome, {username}!")
-            else:
-                messagebox.showerror("Login Error", "Invalid 2FA token.")
+            if token:
+                # نمایش توکن دو مرحله‌ای و تأیید آن
+                messagebox.showinfo("توکن دو مرحله‌ای", f"توکن شما: {token}")
+                entered_token = simpledialog.askstring(
+                    "تأیید دو مرحله‌ای", "توکن را وارد کنید:")
+                if entered_token and self.auth.verify_token(username, entered_token):
+                    self.current_user = username
+                    self.log_manager.log_login(username)
+                    messagebox.showinfo("ورود موفق", f"خوش آمدید، {username}!")
+                    
+                    # به‌روزرسانی وضعیت دکمه‌ها
+                    self.clear_logs_button.config(state=ttk.NORMAL)
+                    self.log_activity_button.config(state=ttk.DISABLED)
+                    self.log_registration_button.config(state=ttk.DISABLED)
+                else:
+                    messagebox.showerror("Login Error", "Invalid 2FA token.")
         except InvalidCredentialsError as e:
             messagebox.showerror("Login Error", str(e))
         except TokenVerificationError as e:
@@ -344,9 +390,9 @@ class CarPartsApp:
                 self.current_user = None
 
                 # Update UI elements
-                self.logout_button.config(state=tk.DISABLED)
-                self.login_button.config(state=tk.NORMAL)
-                self.register_button.config(state=tk.NORMAL)
+                self.clear_logs_button.config(state=ttk.DISABLED)
+                self.log_activity_button.config(state=ttk.NORMAL)
+                self.log_registration_button.config(state=ttk.NORMAL)
 
                 # Provide feedback to the user
                 messagebox.showinfo("Logout Successful", message)
@@ -365,8 +411,8 @@ class CarPartsApp:
 
     def show_registration_logs(self):
         """Create a new window to display user login/logout logs."""
-        reg_log_window = tk.Toplevel(self.root)
-        reg_log_window.title("User  Login/Logout Log Details")
+        reg_log_window = Toplevel(self.root)
+        reg_log_window.title("جزئیات لاگ ورود/خروج کاربران")
         reg_log_window.geometry("600x400")
 
         reg_log_text = tk.Text(reg_log_window)
@@ -378,15 +424,15 @@ class CarPartsApp:
         # Check if there are any logs to display
         if login_logout_logs:
             for log in login_logout_logs:
-                reg_log_text.insert(tk.END, log)
+                reg_log_text.insert(END, log)
         else:
-            reg_log_text.insert(tk.END, "No login/logout logs available.")
+            reg_log_text.insert(END, "هیچ لاگ ورود/خروجی موجود نیست.")
 
         # Make the text widget read-only
-        reg_log_text.config(state=tk.DISABLED)
+        reg_log_text.config(state=DISABLED)
 
         close_button = tk.Button(
-            reg_log_window, text="Close", command=reg_log_window.destroy)
+            reg_log_window, text="بستن", command=reg_log_window.destroy)
         close_button.pack(pady=10)
 
     def check_login_status(self):
@@ -543,8 +589,8 @@ class ReportManager:
         return report if database.parts else "No parts available."
 
 
-if __name__ == "__main__":
-    root = tk.Tk()
+def main():
+    root = Tk()
     app = CarPartsApp(root)
     root.geometry("800x655")  # Increase the window size
     # label = tk.Label(root)
@@ -552,3 +598,7 @@ if __name__ == "__main__":
     # Center the window using eval
     # root.eval('tk::PlaceWindow . center')
     root.mainloop()
+
+
+if __name__ == "__main__":
+    main()

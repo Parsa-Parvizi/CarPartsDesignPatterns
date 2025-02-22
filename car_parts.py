@@ -32,40 +32,35 @@ class SingletonMeta(type):
         return cls._instances[cls]
 
 
-# The 'CarPartDatabase' class is a singleton class that stores information about car parts and allows
-# for adding, removing, and retrieving parts.
+# این کلاس یک الگوی Singleton را برای مدیریت پایگاه داده قطعات خودرو پیاده‌سازی می‌کند
 class CarPartDatabase(metaclass=SingletonMeta):
     def __init__(self):
+        # دیکشنری برای ذخیره انواع مختلف قطعات و قیمت‌های آنها
         self.parts = {
-            "engines": {"V8": 500, "V6": 300},
-            "colors": {"red": "FF0000", "blue": "0000FF"},
-            "tires": {"Pirelli": 100, "Michelin": 150},
-            "wheels": {"alloy": 200, "steel": 50},
-            "seats": {"leather": 300, "cloth": 100}
+            "engines": {"V8": 500, "V6": 300},  # موتورها و قیمت‌های آنها
+            "colors": {"red": "FF0000", "blue": "0000FF"},  # رنگ‌ها و کدهای آنها
+            "tires": {"Pirelli": 100, "Michelin": 150},  # لاستیک‌ها و قیمت‌های آنها
+            "wheels": {"alloy": 200, "steel": 50},  # چرخ‌ها و قیمت‌های آنها
+            "seats": {"leather": 300, "cloth": 100}  # صندلی‌ها و قیمت‌های آنها
         }
 
-    def get_part(self, part_type, part_name):
-        """
-        The function 'get_part' retrieves a specific part by type and name from a dictionary of parts.
+    def get(self, part_type, part_name):
+        """دریافت یک نمونه از قطعه بر اساس نوع و نام"""
+        if part_type == "Engine":
+            return Engine(part_name)
+        elif part_type == "Color":
+            return Color(part_name)
+        return None
 
-        :param part_type: The 'part_type' parameter in the 'get_part' method is used to specify the type
-        of part that you want to retrieve. It is a key that is used to access a dictionary of parts
-        within the 'self' object
-        :param part_name: The 'part_name' parameter in the 'get_part' method is used to specify the name
-        of the part that you want to retrieve from the parts dictionary
-        :return: The 'get_part' method is returning the part with the specified 'part_type' and
-        'part_name' from the 'parts' dictionary. If the 'part_type' is not found in the dictionary, it
-        will return an empty dictionary. If the 'part_name' is not found within the 'part_type'
-        dictionary, it will return 'None'.
-        """
+    def get_part(self, part_type, part_name):
+        """دریافت قیمت قطعه بر اساس نوع و نام"""
         try:
             part_price = self.parts.get(part_type, {}).get(part_name)
             if part_price is None:
-                raise ValueError(f"Part '{part_name}' of type '{
-                                 part_type}' not found.")
+                raise ValueError(f"قطعه '{part_name}' از نوع '{part_type}' یافت نشد.")
             return part_price
         except Exception as e:
-            print(f"Error retrieving part: {e}")
+            print(f"خطا در دریافت قطعه: {e}")
             return None
 
     def add_part(self, part_type, part_name, price):
@@ -167,71 +162,6 @@ class Color(CarPart):
 
     def get_name(self):
         return "Color"
-
-
-# The class 'CarPart' is an abstract base class with abstract methods 'get_price' and 'get_name'.
-class CarPart(ABC):
-    @abstractmethod
-    def get_price(self):
-        pass
-
-    @abstractmethod
-    def get_name(self):
-        pass
-
-
-# The 'Engine' class represents a car engine with a specified power and price.
-class Engine(CarPart):
-    def __init__(self, power):
-        if power not in ["V8", "V6"]:
-            raise ValueError(f"Invalid engine power: {power}")
-        self.power = power
-        self.price = CarPartDatabase().get_part("engines", power)
-
-    def get_price(self):
-        return self.price
-
-    def get_name(self):
-        return f"Engine {self.power}"
-
-
-# The Color class represents a car part with a code and a fixed price of 500.
-class Color(CarPart):
-    def __init__(self, code):
-        if code not in ["red", "blue", "green"]:
-            raise ValueError(f"Invalid color code: {code}")
-        self.code = code
-        self.price = 500  # Fixed price for simplicity
-
-    def get_price(self):
-        return self.price
-
-    def get_name(self):
-        return f"Color {self.code}"
-
-
-# The 'CarPartDatabase' class has a method 'get' that returns an instance of a specific part type
-# based on the input part name.
-class CarPartDatabase:
-    def get(self, part_type, part_name):
-        """
-        The function 'get' returns an instance of a class based on the 'part_type' provided.
-
-        :param part_type: The 'part_type' parameter is used to specify the type of part that you want to
-        retrieve. In the provided 'get' method, it is used to determine whether the part being requested
-        is an "Engine" or a "Color"
-        :param part_name: The 'part_name' parameter is the name or identifier of the specific part that
-        you want to retrieve or create an instance of. It could be the name of an engine model, a color
-        name, or any other part depending on the 'part_type' specified
-        :return: An instance of the 'Engine' class is being returned if the 'part_type' is "Engine", an
-        instance of the 'Color' class is being returned if the 'part_type' is "Color", and 'None' is
-        being returned if the 'part_type' is neither "Engine" nor "Color".
-        """
-        if part_type == "Engine":
-            return Engine(part_name)
-        elif part_type == "Color":
-            return Color(part_name)
-        return None
 
 
 # The 'CarFactory' class is an abstract base class with abstract methods 'create_engine' and
