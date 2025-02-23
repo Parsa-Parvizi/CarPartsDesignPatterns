@@ -104,26 +104,11 @@ The application includes comprehensive error handling for:
 - File operations
 - Network issues
 
-## Future Enhancements
-
-- REST API implementation
-- Mobile application
-- Cloud synchronization
-- Advanced reporting features
-- Inventory analytics
-- Supplier management
-
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Authors
 
-- Your Name
-- Contributors
+- Parsa Parvizi
 
-## Acknowledgments
-
-- List any third-party libraries used
-- Special thanks to contributors
-- Reference to design pattern implementations
