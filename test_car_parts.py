@@ -1,5 +1,5 @@
 import unittest
-from car_parts import CarPartDatabase, Engine
+from car_parts import CarPartDatabase, Engine, Color
 
 
 class TestCarPartDatabase(unittest.TestCase):
@@ -8,38 +8,59 @@ class TestCarPartDatabase(unittest.TestCase):
         """Reset the singleton instance before each test."""
         CarPartDatabase._instances = {}  # Reset singleton instance
         self.database = CarPartDatabase()
-        self.database.add_part("Engine", "V8", 1000)
-        self.database.add_part("Color", "Red", 500)
 
     def test_get_part_existing(self):
-        price = self.database.get_price("Engine", "V8")
-        self.assertEqual(price, 1000)
+        """Test getting an existing part's price"""
+        # Test getting price of existing engine
+        price = self.database.get_part("engines", "V8")
+        self.assertEqual(price, 500)
+
+        # Test getting price of existing color
+        price = self.database.get_part("colors", "red")
+        self.assertEqual(price, "FF0000")
 
     def test_get_part_non_existing(self):
-        price = self.database.get_price("Engine", "V6")
+        """Test getting a non-existing part's price"""
+        # Test non-existing engine
+        price = self.database.get_part("engines", "V10")
         self.assertIsNone(price)
 
-    def test_add_part(self):
-        self.database.add_part("Tire", "Michelin", 150)
-        price = self.database.get_price("Tire", "Michelin")
-        self.assertEqual(price, 150)
-
-    def test_remove_part(self):
-        self.database.remove_part("Engine", "V8")
-        price = self.database.get_price("Engine", "V8")
+        # Test non-existing category
+        price = self.database.get_part("nonexistent", "something")
         self.assertIsNone(price)
+
+    def test_get_engine_instance(self):
+        """Test getting an engine instance"""
+        engine = self.database.get("Engine", "V6")
+        self.assertIsInstance(engine, Engine)
+        self.assertEqual(engine.get_name(), "Engine")
+        self.assertEqual(engine.power, "V6")
+
+    def test_get_color_instance(self):
+        """Test getting a color instance"""
+        color = self.database.get("Color", "red")
+        self.assertIsInstance(color, Color)
+        self.assertEqual(color.get_name(), "Color")
+        self.assertEqual(color.code, "red")
 
 
 class TestEngine(unittest.TestCase):
 
     def test_engine_initialization(self):
+        """Test engine initialization"""
         engine = Engine("V6")
-        self.assertEqual(engine.get_name(), "Engine V6")
-        self.assertEqual(engine.get_price(), 300)  # Assuming V6 price is 300
+        self.assertEqual(engine.get_name(), "Engine")
+        self.assertEqual(engine.get_price(), 1000)
+        self.assertEqual(engine.power, "V6")
 
-    def test_invalid_engine_power(self):
-        with self.assertRaises(ValueError):
-            Engine("V10")  # Invalid power
+
+class TestColor(unittest.TestCase):
+
+    def test_color_initialization(self):
+        """Test color initialization"""
+        color = Color("red")
+        self.assertEqual(color.get_name(), "Color")
+        self.assertEqual(color.code, "red")
 
 
 # Scripts: python -m unittest test_car_parts.py

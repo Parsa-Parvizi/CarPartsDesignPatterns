@@ -3,7 +3,7 @@ from tkinter import messagebox, simpledialog
 
 
 class AuthenticationError(Exception):
-    """کلاس پایه برای خطاهای مربوط به احراز هویت"""
+    """Base class for authentication errors"""
     pass
 
 
@@ -28,19 +28,19 @@ class UserAuthentication:
 
     def register_user(self, username, password):
         if username in self.user_database:
-            raise UsernameAlreadyExistsError("نام کاربری قبلاً وجود دارد")
+            raise UsernameAlreadyExistsError("Username already exists")
         
         secret = pyotp.random_base32()
         self.user_database[username] = (password, secret)
-        return "ثبت‌نام با موفقیت انجام شد"
+        return "Registration successful"
 
     def login(self, username, password):
         if username not in self.user_database:
-            raise InvalidCredentialsError("نام کاربری یا رمز عبور نامعتبر است")
+            raise InvalidCredentialsError("Invalid username or password")
         
         stored_password, secret = self.user_database[username]
         if password != stored_password:
-            raise InvalidCredentialsError("نام کاربری یا رمز عبور نامعتبر است")
+            raise InvalidCredentialsError("Invalid username or password")
         
         totp = pyotp.TOTP(secret)
         return totp.now()
@@ -62,11 +62,11 @@ class UserAuthentication:
         return "No user is logged in."
 
     def register(self, username, password):
-        """ثبت‌نام کاربر جدید"""
+        """Register a new user"""
         if username in self.user_database:
-            raise UsernameAlreadyExistsError("نام کاربری قبلاً وجود دارد")
+            raise UsernameAlreadyExistsError("Username already exists")
         
-        # ایجاد کلید رمز دو مرحله‌ای
+        # Create a 2FA secret key
         secret = pyotp.random_base32()
         self.user_database[username] = (password, secret)
-        return "ثبت‌نام با موفقیت انجام شد"
+        return "Registration successful"

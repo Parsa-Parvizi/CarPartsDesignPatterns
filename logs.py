@@ -2,14 +2,14 @@ import logging
 
 
 class BaseLogManager:
-    """کلاس پایه برای مدیریت لاگ‌ها"""
+    """Base class for managing logs"""
 
     def __init__(self, filename):
         self.filename = filename
         self.setup_logging()
 
     def setup_logging(self):
-        """تنظیم پیکربندی لاگ‌گذاری"""
+        """Configure logging settings"""
         logging.basicConfig(
             filename=self.filename,
             level=logging.INFO,
@@ -42,20 +42,20 @@ class LogManager(BaseLogManager):
         self.setup_logging()
 
     def log_action(self, action):
-        """ثبت یک عملیات با مدیریت خطا"""
+        """Log an action with error handling"""
         try:
             if "logged in" not in action and "logged out" not in action:
                 logging.info(action)
         except Exception as e:
-            print(f"خطا در ثبت عملیات: {e}")
+            print(f"Error logging action: {e}")
 
     def log_login(self, username):
         """Log user login."""
-        logging.info(f"User  '{username}' logged in.")
+        logging.info(f"User '{username}' logged in.")
 
     def log_logout(self, username):
         """Log user logout."""
-        logging.info(f"User  '{username}' logged out.")
+        logging.info(f"User '{username}' logged out.")
 
     def get_login_logout_logs(self):
         """Retrieve only login and logout logs."""
@@ -78,11 +78,11 @@ class UserLogManager(BaseLogManager):
 
     def log_login(self, username):
         """Log user login."""
-        logging.info(f"User  '{username}' logged in.")
+        logging.info(f"User '{username}' logged in.")
 
     def log_logout(self, username):
         """Log user logout."""
-        logging.info(f"User  '{username}' logged out.")
+        logging.info(f"User '{username}' logged out.")
 
     def get_login_logout_logs(self):
         """Retrieve only login and logout logs."""

@@ -64,24 +64,22 @@ class CarPartDatabase(metaclass=SingletonMeta):
             return None
 
     def add_part(self, part_type, part_name, price):
-        """
-        The function 'add_part' adds a part with its type, name, and price to a dictionary of parts.
+        if part_name in self.parts:
+            raise ValueError("Part already exists")
+        self.parts[part_name] = {'type': part_type, 'price': price}
+        print(f"Part '{part_name}' added with price {price}.")
 
-        :param part_type: The 'part_type' parameter in the 'add_part' method refers to the category or
-        type of the part being added. It is used to organize the parts within the 'self.parts'
-        dictionary
-        :param part_name: The 'part_name' parameter in the 'add_part' method refers to the name of the
-        part that you want to add to the 'self.parts' dictionary. This method allows you to add a part
-        with its corresponding price under a specific 'part_type'
-        :param price: The 'price' parameter in the 'add_part' method represents the cost or price of the
-        part being added to the object. It is the amount that needs to be paid for that specific part
-        :return: The 'add_part' method is returning the instance of the class itself ('self') after
-        adding the specified part information to the 'parts' dictionary.
-        """
-        if part_type not in self.parts:
-            self.parts[part_type] = {}
-        self.parts[part_type][part_name] = price
-        return self
+    def get_price(self, part_type, part_name):
+        part = self.parts.get(part_name)
+        if part and part['type'] == part_type:
+            return part['price']
+        return None
+
+    def edit_part(self, part_name, new_price):
+        if part_name in self.parts:
+            self.parts[part_name]['price'] = new_price
+            return True
+        return False
 
     def remove_part(self, part_type, part_name):
         """

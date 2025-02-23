@@ -116,7 +116,16 @@ class ReportManager(metaclass=SingletonMeta):
         ''')
         self.conn.commit()
 
+    def insert_car_part(self, name, part_type):
+        """Insert a car part into the database."""
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            INSERT INTO car_parts (name, type) VALUES (?, ?)
+        ''', (name, part_type))
+        self.conn.commit()
+
     def generate_report(self, car):
+        """Generate a report for the car."""
         report = {
             "engine": car.engine.get_name(),
             "color": car.color.get_name(),

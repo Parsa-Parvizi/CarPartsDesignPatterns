@@ -1,16 +1,19 @@
+from abc import ABC, abstractmethod
+from singleton import SingletonMeta
 from tkinter import *
 from tkinter import ttk, messagebox, simpledialog, filedialog
 import tkinter as tk
-from car_parts import CarPartDatabase, ReportManager
+import csv
+from car_parts import CarPartDatabase, ReportManager, Engine, Color
 from auth import UserAuthentication, InvalidCredentialsError, TokenVerificationError, UsernameAlreadyExistsError
 from logs import LogManager
 
 
 class CarPartsApp:
     def __init__(self, root):
-        """راه‌اندازی اولیه برنامه و ایجاد رابط کاربری"""
+        """Initialize the application and create the user interface"""
         self.root = root
-        self.root.title("سیستم مدیریت قطعات خودرو")
+        self.root.title("Car Parts Management System")
         
         # Initialize components
         self.database = CarPartDatabase()
@@ -22,162 +25,130 @@ class CarPartsApp:
         # Create UI
         self.create_widgets()
         
-        # بررسی وضعیت ورود در شروع برنامه
+        # Check login status at startup
         self.check_login_status()
 
         # Bind the closing event to the on_closing method
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def create_widgets(self):
-        # تنظیم استایل‌ها
-        style = ttk.Style()
-        style.configure("Add.TButton", foreground="white", background="#4CAF50", font=("central", 12))
-        style.configure("Get.TButton", foreground="white", background="#2196F3", font=("central", 12))
-        style.configure("Report.TButton", foreground="white", background="#FF9800", font=("central", 12))
-        style.configure("View.TButton", foreground="white", background="#9C27B0", font=("central", 12))
-        style.configure("Help.TButton", foreground="white", background="#607D8B", font=("central", 12))
+        # Create main container frame
+        container = ttk.Frame(self.root)
+        container.pack(fill="both", expand=True)
+        container.grid_columnconfigure(0, weight=1)  # Center content horizontally
+
+        # Create scroll area
+        canvas = tk.Canvas(container)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        scrollable_frame.grid_columnconfigure(0, weight=1)  # Center content horizontally
+
+        canvas.create_window((400, 0), window=scrollable_frame, anchor="n")  # Center point
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Initialize entry widgets
+        self.part_type_entry = ttk.Entry(scrollable_frame)
+        self.part_name_entry = ttk.Entry(scrollable_frame)
+        self.price_entry = ttk.Entry(scrollable_frame)
+        self.retrieve_part_entry = ttk.Entry(scrollable_frame)
 
         # Login Frame
-        login_frame = ttk.LabelFrame(self.root, text="ورود به سیستم", padding=(10, 5))
-        login_frame.pack(fill="x", padx=10, pady=5)
+        login_frame = ttk.LabelFrame(scrollable_frame, text="Login")
+        login_frame.pack(fill="x", padx=20, pady=5)
         
-        ttk.Label(login_frame, text="نام کاربری:").grid(row=0, column=0, padx=5, pady=5)
+        # Center login frame contents
+        login_frame.grid_columnconfigure(1, weight=1)
+        
+        # Login widgets with center alignment
+        ttk.Label(login_frame, text="Username:").grid(row=0, column=0, padx=5, pady=5)
         self.username_entry = ttk.Entry(login_frame)
-        self.username_entry.grid(row=0, column=1, padx=5, pady=5)
+        self.username_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
         
-        ttk.Label(login_frame, text="رمز عبور:").grid(row=1, column=0, padx=5, pady=5)
+        ttk.Label(login_frame, text="Password:").grid(row=1, column=0, padx=5, pady=5)
         self.password_entry = ttk.Entry(login_frame, show="*")
-        self.password_entry.grid(row=1, column=1, padx=5, pady=5)
+        self.password_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+
+        # Center login buttons
+        button_frame = ttk.Frame(login_frame)
+        button_frame.grid(row=2, column=0, columnspan=2, pady=5)
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
         
-        ttk.Button(login_frame, text="ورود", command=self.login, style="Add.TButton").grid(row=2, column=0, padx=5, pady=5)
-        ttk.Button(login_frame, text="ثبت‌نام", command=self.register_user, style="Get.TButton").grid(row=2, column=1, padx=5, pady=5)
+        ttk.Button(button_frame, text="Login", command=self.login).grid(row=0, column=0, padx=5)
+        ttk.Button(button_frame, text="Register", command=self.register_user).grid(row=0, column=1, padx=5)
 
-        # Frame for adding parts
-        frame_add = ttk.LabelFrame(self.root, text="اضافه کردن قطعه", padding=(5, 5))
-        frame_add.pack(pady=5)
+        # Parts Management Frame
+        parts_frame = ttk.LabelFrame(scrollable_frame, text="Parts Management")
+        parts_frame.pack(fill="x", padx=20, pady=5)
+        
+        # Center parts frame contents
+        parts_frame.grid_columnconfigure(1, weight=1)
 
-        ttk.Label(frame_add, text="نوع قطعه:").grid(row=0, column=0, sticky="w")
-        self.part_type_entry = ttk.Entry(frame_add)
-        self.part_type_entry.grid(row=0, column=1, padx=5, pady=5)
+        # Add part section with center alignment
+        current_row = 0
+        
+        # Create labels and entries
+        ttk.Label(parts_frame, text="Part Type:").grid(row=current_row, column=0, padx=5, pady=5)
+        self.part_type_entry = ttk.Entry(parts_frame)
+        self.part_type_entry.grid(row=current_row, column=1, padx=5, pady=5, sticky="ew")
+        current_row += 1
 
-        ttk.Label(frame_add, text="نام قطعه:").grid(row=1, column=0, sticky="w")
-        self.part_name_entry = ttk.Entry(frame_add)
-        self.part_name_entry.grid(row=1, column=1, padx=5, pady=5)
+        ttk.Label(parts_frame, text="Part Name:").grid(row=current_row, column=0, padx=5, pady=5)
+        self.part_name_entry = ttk.Entry(parts_frame)
+        self.part_name_entry.grid(row=current_row, column=1, padx=5, pady=5, sticky="ew")
+        current_row += 1
 
-        ttk.Label(frame_add, text="قیمت:").grid(row=2, column=0, sticky="w")
-        self.price_entry = ttk.Entry(frame_add)
-        self.price_entry.grid(row=2, column=1, padx=5, pady=5)
+        ttk.Label(parts_frame, text="Price:").grid(row=current_row, column=0, padx=5, pady=5)
+        self.price_entry = ttk.Entry(parts_frame)
+        self.price_entry.grid(row=current_row, column=1, padx=5, pady=5, sticky="ew")
+        current_row += 1
 
-        self.add_part_button = ttk.Button(
-            frame_add, 
-            text="اضافه کردن قطعه", 
-            command=self.add_part, 
-            style="Add.TButton"
-        )
-        self.add_part_button.grid(row=3, columnspan=2, pady=5)
+        # Search section
+        ttk.Label(parts_frame, text="Search Part:").grid(row=current_row, column=0, padx=5, pady=5)
+        self.retrieve_part_entry = ttk.Entry(parts_frame)
+        self.retrieve_part_entry.grid(row=current_row, column=1, padx=5, pady=5, sticky="ew")
+        current_row += 1
 
-        # Frame for retrieving parts
-        frame_retrieve = ttk.LabelFrame(self.root, text="دریافت قیمت قطعه", padding=(5, 5))
-        frame_retrieve.pack(pady=5)
+        # Center all buttons
+        buttons = [
+            ("Add Part", self.add_part),
+            ("Search Part", self.get_price),
+            ("Generate Report", self.generate_report),
+            ("View Database", self.view_database),
+            ("Help", self.show_help),
+            ("Clear All Logs", self.clear_all_logs)
+        ]
 
-        ttk.Label(frame_retrieve, text="دریافت قطعه:").grid(row=0, column=0, sticky="w")
-        # self.database.validate_price(price)  # Validate price before adding
-        self.retrieve_part_entry = ttk.Entry(frame_retrieve)
-        self.retrieve_part_entry.grid(row=0, column=1, padx=5, pady=5)
+        for button_text, command in buttons:
+            ttk.Button(parts_frame, text=button_text, command=command).grid(
+                row=current_row, column=0, columnspan=2, pady=5, sticky="ew", padx=20
+            )
+            current_row += 1
 
-        self.retrieve_button = ttk.Button(
-            frame_retrieve, 
-            text="دریافت قیمت", 
-            command=self.get_price, 
-            style="Get.TButton"
-        )
-        self.retrieve_button.grid(row=0, column=2, padx=5, pady=5)
+        # Pack scrollbar and canvas
+        scrollbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
 
-        # Frame for generating reports
-        frame_report = ttk.LabelFrame(self.root, text="تولید گزارش", padding=(5, 5))
-        frame_report.pack(pady=5)
-
-        self.generate_report_button = ttk.Button(
-            frame_report, 
-            text="تولید گزارش", 
-            command=self.generate_report, 
-            style="Report.TButton"
-        )
-        self.generate_report_button.pack(pady=5)
-
-        # Frame for viewing database
-        frame_view = ttk.LabelFrame(self.root, text="نمایش دیتابیس", padding=(10, 10))
-        frame_view.pack(pady=5)
-
-        self.view_database_button = ttk.Button(
-            frame_view, 
-            text="نمایش دیتابیس", 
-            command=self.view_database, 
-            style="View.TButton"
-        )
-        self.view_database_button.pack(pady=5)
-
-        # Help button
-        self.help_button = ttk.Button(
-            self.root, 
-            text="راهنما", 
-            command=self.show_help, 
-            style="Help.TButton"
-        )
-        self.help_button.pack(pady=5)
-
-        # Frame for data import/export
-        frame_data = ttk.LabelFrame(self.root, text="وارد کردن/خروج دیتا", padding=(5, 5))
-        frame_data.pack(pady=5)
-
-        self.export_button = ttk.Button(
-            frame_data, 
-            text="خروج به CSV", 
-            command=self.export_data, 
-            style="Get.TButton"
-        )
-        self.export_button.pack(pady=5)
-        self.export_button.grid(row=0, column=0, padx=5, pady=5)
-
-        self.import_button = ttk.Button(
-            frame_data, 
-            text="وارد کردن از CSV", 
-            command=self.import_data, 
-            style="Add.TButton"
-        )
-        # self.import_button.pack(pady=5)
-        self.import_button.grid(row=0, column=1, padx=5, pady=5)
-
-        # Frame for logging
-        frame_logging = ttk.LabelFrame(self.root, text="نمایش لاگ", padding=(10, 10))
-        frame_logging.pack(pady=5)
-
-        # Log Activity button
-        self.log_activity_button = ttk.Button(
-            frame_logging, 
-            text="نمایش لاگ عملیات", 
-            command=self.show_logs, 
-            style="Report.TButton"
-        )
-        self.log_activity_button.pack(side=tk.LEFT, padx=5)
-
-        # Log Registration button
-        self.log_registration_button = ttk.Button(
-            frame_logging, 
-            text="نمایش لاگ ثبت‌نام", 
-            command=self.show_registration_logs, 
-            style="Add.TButton"
-        )
-        self.log_registration_button.pack(side=tk.LEFT, padx=5)
-
-        # Clear Logs button
-        self.clear_logs_button = ttk.Button(
-            self.root, 
-            text="پاک کردن همه لاگ", 
-            command=self.clear_all_logs, 
-            style="Get.TButton"
-        )
-        self.clear_logs_button.pack(pady=5)
+        # Update window size based on content
+        self.root.update_idletasks()
+        content_width = scrollable_frame.winfo_reqwidth() + scrollbar.winfo_reqwidth() + 40
+        content_height = min(scrollable_frame.winfo_reqheight() + 40, 800)  # Max height of 800px
+        
+        # Set minimum dimensions
+        width = max(content_width, 500)  # Minimum width of 500px
+        height = max(content_height, 400)  # Minimum height of 400px
+        
+        # Center the window on screen
+        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.root.winfo_screenheight() // 2) - (height // 2)
+        
+        # Set the window size and position
+        self.root.geometry(f'{width}x{height}+{x}+{y}')
 
     def add_part(self):
         part_type = self.part_type_entry.get()
@@ -185,32 +156,27 @@ class CarPartsApp:
         price = self.price_entry.get()
 
         if not part_type or not part_name or not price:
-            messagebox.showerror("خطا در ورود اطلاعات", "همه فیلدها اجباری هستند!")
+            messagebox.showerror("Input Error", "All fields are required!")
             return
 
         try:
             price = float(price)
-            # self.database.add_part(part_type, part_name, price)
-            # self.part_log_manager.log_action(f"Added part: {part_name}, Type: {
-            #                                  part_type}, Price: ${price:.2f}")
-            messagebox.showinfo("موفقیت", f"قطعه '{
-                                part_name}' با موفقیت اضافه شد!")
+            self.database.add_part(part_type, part_name, price)
+            messagebox.showinfo("Success", f"Part '{part_name}' added successfully!")
             self.part_type_entry.delete(0, ttk.END)
             self.part_name_entry.delete(0, ttk.END)
             self.price_entry.delete(0, ttk.END)
         except ValueError:
-            messagebox.showerror("خطا در ورود اطلاعات", "قیمت باید یک عدد باشد!")
+            messagebox.showerror("Input Error", "Price must be a number!")
 
     def get_price(self):
         part_name = self.retrieve_part_entry.get()
-        # Assuming we are retrieving Engine parts
-        price = self.database.get_price("Engine", part_name)
+        price = self.database.get_price(part_name)
 
         if price is not None:
-            messagebox.showinfo("قیمت", f"قیمت '{
-                                part_name}' برابر است با {price}.")
+            messagebox.showinfo("Price", f"The price of '{part_name}' is {price}.")
         else:
-            messagebox.showerror("پیدا نشد", f"قطعه '{part_name}' پیدا نشد.")
+            messagebox.showerror("Not Found", f"Part '{part_name}' not found.")
 
     def get_registration_logs(self):
         # Implement this method to return registration logs
@@ -218,53 +184,48 @@ class CarPartsApp:
 
     def edit_part(self):
         part_name = simpledialog.askstring(
-            "ویرایش قطعه", "نام قطعه مورد نظر را وارد کنید:")
+            "Edit Part", "Enter part name:")
         if part_name:
             new_price = simpledialog.askfloat(
-                "ویرایش قیمت", "قیمت جدید را وارد کنید:")
+                "Edit Price", "Enter new price:")
             if new_price is not None:
                 success = self.database.edit_part(part_name, new_price)
                 if success:
-                    messagebox.showinfo("موفقیت", f"قطعه '{
-                                        part_name}' با موفقیت به روز شد!")
+                    messagebox.showinfo("Success", f"Part '{part_name}' updated successfully!")
                 else:
-                    messagebox.showerror("پیدا نشد", f"قطعه '{
-                        part_name}' پیدا نشد.")
+                    messagebox.showerror("Not Found", f"Part '{part_name}' not found.")
 
     def delete_part(self):
         part_name = simpledialog.askstring(
-            "حذف قطعه", "نام قطعه مورد نظر را وارد کنید:")
+            "Delete Part", "Enter part name:")
         if part_name:
             success = self.database.delete_part(part_name)
             if success:
-                messagebox.showinfo("موفقیت", f"قطعه '{
-                                    part_name}' با موفقیت حذف شد!")
+                messagebox.showinfo("Success", f"Part '{part_name}' deleted successfully!")
             else:
-                messagebox.showerror("پیدا نشد", f"قطعه '{
-                    part_name}' پیدا نشد.")
+                messagebox.showerror("Not Found", f"Part '{part_name}' not found.")
 
     def show_logs(self):
-        logs = self.log_manager.get_logs()
+        # Create and center new window
         log_window = Toplevel(self.root)
-        log_window.title("جزئیات لاگ")
-        log_window.geometry("600x400")
+        log_window.title("Log Details")
+        
+        # Center the window
+        window_width = 600
+        window_height = 400
+        x = (log_window.winfo_screenwidth() // 2) - (window_width // 2)
+        y = (log_window.winfo_screenheight() // 2) - (window_height // 2)
+        log_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-        log_text = tk.Text(log_window)
-        log_text.pack(fill=tk.BOTH, expand=True)
+        # Center content
+        container = ttk.Frame(log_window)
+        container.pack(fill="both", expand=True)
+        container.grid_columnconfigure(0, weight=1)
 
-        for log in logs:
-            log_text.insert(END, log)
+        log_text = tk.Text(container)
+        log_text.pack(fill="both", expand=True, padx=20, pady=10)
 
-        log_text.config(state=DISABLED)  # Make the text widget read-only
-
-        close_button = tk.Button(
-            log_window, 
-            text="بستن", 
-            command=log_window.destroy,
-            bg="#4CAF50",
-            fg="white",
-            font=("central", 12)
-        )
+        close_button = ttk.Button(container, text="Close", command=log_window.destroy)
         close_button.pack(pady=10)
 
     def generate_report(self):
@@ -283,46 +244,37 @@ class CarPartsApp:
             "- Generate a report of all parts.\n\n"
             "To use the application, simply fill in the fields and click the corresponding buttons."
         )
-        messagebox.showinfo("راهنما", help_message)
+        messagebox.showinfo("Help", help_message)
 
     def view_database(self):
-        # Create a new window to display the database
+        # Create and center new window
         view_window = Toplevel(self.root)
-        view_window.title("نمایش دیتابیس")
-        view_window.geometry("600x400")  # Set a larger window size
+        view_window.title("View Database")
+        
+        # Center the window
+        window_width = 600
+        window_height = 400
+        x = (view_window.winfo_screenwidth() // 2) - (window_width // 2)
+        y = (view_window.winfo_screenheight() // 2) - (window_height // 2)
+        view_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-        # Create a Treeview widget with additional columns
-        tree = ttk.Treeview(view_window, columns=(
-            "Type", "Name", "Price"), show='headings')
-        tree.heading("Type", text="نوع قطعه")
-        tree.heading("Name", text="نام قطعه")
-        tree.heading("Price", text="قیمت")
+        # Center content
+        container = ttk.Frame(view_window)
+        container.pack(fill="both", expand=True)
+        container.grid_columnconfigure(0, weight=1)
 
-        # Set column widths
-        tree.column("Type", width=150)
-        tree.column("Name", width=250)
-        tree.column("Price", width=100)
+        # Create centered treeview
+        tree = ttk.Treeview(container, columns=("Type", "Name", "Price"), show="headings")
+        
+        # Configure columns
+        for col in ("Type", "Name", "Price"):
+            tree.heading(col, text=col, anchor="center")
+            tree.column(col, anchor="center", width=150)
 
-        # Add a vertical scrollbar
-        scrollbar = ttk.Scrollbar(
-            view_window, 
-            orient="vertical", 
-            command=tree.yview
-        )
-        tree.configure(yscroll=scrollbar.set)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        tree.pack(fill="both", expand=True, padx=20, pady=10)
 
-        # Pack the Treeview widget
-        tree.pack(fill=tk.BOTH, expand=True)
-
-        # Insert data into the Treeview
-        for part_name, info in self.database.parts.items():
-            tree.insert("", END, values=(
-                info['type'], part_name, f"${info['price']:.2f}"))
-
-        # Add a button to close the window
-        close_button = tk.Button(
-            view_window, text="بستن", command=view_window.destroy)
+        # Add centered close button
+        close_button = ttk.Button(container, text="Close", command=view_window.destroy)
         close_button.pack(pady=10)
 
     def export_data(self):
@@ -439,8 +391,7 @@ class CarPartsApp:
         """Check if the user is logged in; if not, prompt for login."""
         if self.current_user:
             # Provide a welcome message to the logged-in user
-            messagebox.showinfo("Welcome", f"Welcome back, {
-                                self.current_user}!")
+            messagebox.showinfo("Welcome", f"Welcome back, {self.current_user}!")
         else:
             # Inform the user that they need to log in
             messagebox.showinfo(
@@ -459,7 +410,6 @@ class Inventory:
     def add_part(self, part_name, price):
         """Add a part to the inventory after validating the price."""
         if self.validate_price(price):
-
             self.parts[part_name] = float(price)
             print(f"Part '{part_name}' added with price {price}.")
         else:
@@ -489,48 +439,35 @@ class Inventory:
             return False
 
 
-class CarPartDatabase:
+class CarPartDatabase(metaclass=SingletonMeta):
     def __init__(self):
-        self.parts = {}
+        # Dictionary to store different types of parts and their prices
+        self.parts = {
+            "engines": {"V8": 500, "V6": 300},  # Engines and their prices
+            "colors": {"red": "FF0000", "blue": "0000FF"},  # Colors and their codes
+            "tires": {"Pirelli": 100, "Michelin": 150},  # Tires and their prices
+            "wheels": {"alloy": 200, "steel": 50},  # Wheels and their prices
+            "seats": {"leather": 300, "cloth": 100}  # Seats and their prices
+        }
 
-    def add_part(self, part_type, part_name, price):
-        if part_name in self.parts:
-            raise ValueError("Part already exists.")
-        self.parts[part_name] = {'type': part_type, 'price': price}
-
-    def get_price(self, part_type, part_name):
-        part = self.parts.get(part_name)
-        if part and part['type'] == part_type:
-            return part['price']
+    def get(self, part_type, part_name):
+        """Get a part instance based on type and name"""
+        if part_type == "Engine":
+            return Engine(part_name)
+        elif part_type == "Color":
+            return Color(part_name)
         return None
 
-    def edit_part(self, part_name, new_price):
-        if part_name in self.parts:
-            self.parts[part_name]['price'] = new_price
-            return True
-        return False
-
-    def delete_part(self, part_name):
-        if part_name in self.parts:
-            del self.parts[part_name]
-            return True
-        return False
-
-    def list_parts(self):
-        """Returns a list of all parts in the database."""
-        return [(name, info['type'], info['price']) for name, info in self.parts.items()]
-
-    def search_part(self, part_name):
-        """Search for a part by name and return its details."""
-        part = self.parts.get(part_name)
-        if part:
-            return part
-        return None
-
-    def validate_price(self, price):
-        """Check if the price is a valid number."""
-        if price < 0:
-            raise ValueError("Price must be a non-negative number.")
+    def get_part(self, part_type, part_name):
+        """Get part price based on type and name"""
+        try:
+            part_price = self.parts.get(part_type, {}).get(part_name)
+            if part_price is None:
+                raise ValueError(f"Part '{part_name}' of type '{part_type}' not found.")
+            return part_price
+        except Exception as e:
+            print(f"Error retrieving part: {e}")
+            return None
 
 
 class DataExporter:
@@ -574,7 +511,6 @@ class DataImporter:
                 "Login Failed", "Invalid username or password.")
 
     def validate_login(self, username, password):
-
         return True
 
     def on_close(self):
@@ -584,19 +520,17 @@ class DataImporter:
 class ReportManager:
     def generate_report(self, database):
         report = "Car Parts Report:\n"
-        report += "\n".join([f"{name}: {info['type']} - ${info['price']
-                                                          }" for name, info in database.parts.items()])
+        report += "\n".join([f"{name}: {info['type']} - ${info['price']}"] for name, info in database.parts.items())
         return report if database.parts else "No parts available."
 
 
 def main():
     root = Tk()
     app = CarPartsApp(root)
-    root.geometry("800x655")  # Increase the window size
-    # label = tk.Label(root)
-    # label.place(x=70, y=80)
-    # Center the window using eval
-    # root.eval('tk::PlaceWindow . center')
+    
+    # Set minimum window size
+    root.minsize(500, 400)
+    
     root.mainloop()
 
 
